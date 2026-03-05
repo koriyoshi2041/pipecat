@@ -322,6 +322,7 @@ class CartesiaTTSService(WebsocketTTSService):
             push_text_frames=False,
             pause_frame_processing=False,
             sample_rate=sample_rate,
+            push_start_frame=True,
             text_aggregator=text_aggregator,
             settings=CartesiaTTSSettings(
                 model=model,
@@ -665,11 +666,6 @@ class CartesiaTTSService(WebsocketTTSService):
             if not self._websocket or self._websocket.state is State.CLOSED:
                 await self._connect()
 
-            if not self.audio_context_available(context_id):
-                await self.create_audio_context(context_id)
-                await self.start_ttfb_metrics()
-                yield TTSStartedFrame(context_id=context_id)
-
             msg = self._build_msg(text=text, context_id=context_id)
 
             try:
@@ -750,6 +746,8 @@ class CartesiaHttpTTSService(TTSService):
 
         super().__init__(
             sample_rate=sample_rate,
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=CartesiaTTSSettings(
                 model=model,
                 voice=voice_id,
@@ -848,8 +846,6 @@ class CartesiaHttpTTSService(TTSService):
                     )
                 voice_config["__experimental_controls"] = {"emotion": self._settings.emotion}
 
-            await self.start_ttfb_metrics()
-
             output_format = {
                 "container": self._settings.output_container,
                 "encoding": self._settings.output_encoding,
@@ -876,10 +872,6 @@ class CartesiaHttpTTSService(TTSService):
 
             if self._settings.pronunciation_dict_id:
                 payload["pronunciation_dict_id"] = self._settings.pronunciation_dict_id
-
-            if not self.audio_context_available(context_id):
-                await self.create_audio_context(context_id)
-                yield TTSStartedFrame(context_id=context_id)
 
             session = await self._client._get_session()
 
