@@ -11,7 +11,7 @@ text-to-speech synthesis using local Docker deployment.
 """
 
 from dataclasses import dataclass, field
-from typing import AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 
 import aiohttp
 from loguru import logger
