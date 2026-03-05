@@ -155,6 +155,7 @@ class InworldHttpTTSService(TTSService):
         super().__init__(
             push_text_frames=False,
             push_stop_frames=True,
+            push_start_frame=True,
             sample_rate=sample_rate,
             settings=InworldTTSSettings(
                 model=model,
@@ -308,11 +309,6 @@ class InworldHttpTTSService(TTSService):
         }
 
         try:
-            await self.start_ttfb_metrics()
-
-            await self.start_word_timestamps()
-            yield TTSStartedFrame(context_id=context_id)
-
             async with self._session.post(
                 self._base_url, json=payload, headers=headers
             ) as response:
@@ -1003,9 +999,9 @@ class InworldTTSService(WebsocketTTSService):
 
             try:
                 if not self.audio_context_available(context_id):
+                    await self.create_audio_context(context_id)
                     await self.start_ttfb_metrics()
                     yield TTSStartedFrame(context_id=context_id)
-                    await self.create_audio_context(context_id)
                     await self._send_context(context_id)
 
                 await self._send_text(context_id, text)

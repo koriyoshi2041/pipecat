@@ -28,8 +28,6 @@ from pipecat.frames.frames import (
     Frame,
     StartFrame,
     TTSAudioRawFrame,
-    TTSStartedFrame,
-    TTSStoppedFrame,
 )
 from pipecat.services.settings import NOT_GIVEN, TTSSettings, _NotGiven
 from pipecat.services.tts_service import TTSService
@@ -107,6 +105,8 @@ class NvidiaTTSService(TTSService):
 
         super().__init__(
             sample_rate=sample_rate,
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=NvidiaTTSSettings(
                 model=model_function_map.get("model_name"),
                 voice=voice_id,
@@ -238,9 +238,6 @@ class NvidiaTTSService(TTSService):
             assert self._service is not None, "TTS service not initialized"
             assert self._config is not None, "Synthesis configuration not created"
 
-            await self.start_ttfb_metrics()
-            yield TTSStartedFrame(context_id=context_id)
-
             logger.debug(f"{self}: Generating TTS [{text}]")
 
             responses = await asyncio.to_thread(read_audio_responses)
@@ -256,7 +253,6 @@ class NvidiaTTSService(TTSService):
                 yield frame
 
             await self.start_tts_usage_metrics(text)
-            yield TTSStoppedFrame(context_id=context_id)
         except asyncio.TimeoutError as e:
             logger.error(f"{self} timeout waiting for audio response")
             yield ErrorFrame(error=f"{self} error: {e}")

@@ -22,8 +22,6 @@ from pipecat.frames.frames import (
     Frame,
     StartFrame,
     TTSAudioRawFrame,
-    TTSStartedFrame,
-    TTSStoppedFrame,
 )
 from pipecat.services.settings import NOT_GIVEN, TTSSettings, _NotGiven
 from pipecat.services.tts_service import TTSService
@@ -145,6 +143,8 @@ class OpenAITTSService(TTSService):
 
         super().__init__(
             sample_rate=sample_rate,
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=OpenAITTSSettings(
                 model=model,
                 voice=voice,
@@ -190,8 +190,6 @@ class OpenAITTSService(TTSService):
         """
         logger.debug(f"{self}: Generating TTS [{text}]")
         try:
-            await self.start_ttfb_metrics()
-
             # Setup API parameters
             create_params = {
                 "input": text,
@@ -223,12 +221,10 @@ class OpenAITTSService(TTSService):
 
                 CHUNK_SIZE = self.chunk_size
 
-                yield TTSStartedFrame(context_id=context_id)
                 async for chunk in r.iter_bytes(CHUNK_SIZE):
                     if len(chunk) > 0:
                         await self.stop_ttfb_metrics()
                         frame = TTSAudioRawFrame(chunk, self.sample_rate, 1, context_id=context_id)
                         yield frame
-                yield TTSStoppedFrame(context_id=context_id)
         except BadRequestError as e:
             yield ErrorFrame(error=f"Unknown error occurred: {e}")

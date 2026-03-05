@@ -18,8 +18,6 @@ from pipecat.frames.frames import (
     ErrorFrame,
     Frame,
     TTSAudioRawFrame,
-    TTSStartedFrame,
-    TTSStoppedFrame,
 )
 from pipecat.services.settings import NOT_GIVEN, TTSSettings, _NotGiven
 from pipecat.services.tts_service import TTSService
@@ -103,6 +101,8 @@ class GroqTTSService(TTSService):
 
         super().__init__(
             pause_frame_processing=True,
+            push_start_frame=True,
+            push_stop_frames=True,
             sample_rate=sample_rate,
             settings=GroqTTSSettings(
                 model=model_name,
@@ -141,9 +141,6 @@ class GroqTTSService(TTSService):
         """
         logger.debug(f"{self}: Generating TTS [{text}]")
         measuring_ttfb = True
-        await self.start_ttfb_metrics()
-        yield TTSStartedFrame(context_id=context_id)
-
         try:
             response = await self._client.audio.speech.create(
                 model=self._settings.model,
@@ -168,5 +165,3 @@ class GroqTTSService(TTSService):
                     yield TTSAudioRawFrame(bytes, frame_rate, channels, context_id=context_id)
         except Exception as e:
             yield ErrorFrame(error=f"Unknown error occurred: {e}")
-
-        yield TTSStoppedFrame(context_id=context_id)

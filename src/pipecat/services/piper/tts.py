@@ -17,8 +17,6 @@ from loguru import logger
 from pipecat.frames.frames import (
     ErrorFrame,
     Frame,
-    TTSStartedFrame,
-    TTSStoppedFrame,
 )
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
@@ -70,6 +68,8 @@ class PiperTTSService(TTSService):
             **kwargs: Additional arguments passed to the parent `TTSService`.
         """
         super().__init__(
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=PiperTTSSettings(model=None, voice=voice_id, language=None),
             **kwargs,
         )
@@ -137,11 +137,7 @@ class PiperTTSService(TTSService):
         logger.debug(f"{self}: Generating TTS [{text}]")
 
         try:
-            await self.start_ttfb_metrics()
-
             await self.start_tts_usage_metrics(text)
-
-            yield TTSStartedFrame(context_id=context_id)
 
             async for frame in self._stream_audio_frames_from_iterator(
                 async_iterator(self._voice.synthesize(text)),
@@ -156,7 +152,6 @@ class PiperTTSService(TTSService):
         finally:
             logger.debug(f"{self}: Finished TTS [{text}]")
             await self.stop_ttfb_metrics()
-            yield TTSStoppedFrame(context_id=context_id)
 
 
 # This assumes a running TTS service running:
@@ -201,6 +196,8 @@ class PiperHttpTTSService(TTSService):
             **kwargs: Additional arguments passed to the parent TTSService.
         """
         super().__init__(
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=PiperHttpTTSSettings(model=None, voice=voice_id, language=None),
             **kwargs,
         )
@@ -236,8 +233,6 @@ class PiperHttpTTSService(TTSService):
             "Content-Type": "application/json",
         }
         try:
-            await self.start_ttfb_metrics()
-
             data = {
                 "text": text,
                 "voice": self._settings.voice,
@@ -253,8 +248,6 @@ class PiperHttpTTSService(TTSService):
 
                 await self.start_tts_usage_metrics(text)
 
-                yield TTSStartedFrame(context_id=context_id)
-
                 CHUNK_SIZE = self.chunk_size
 
                 async for frame in self._stream_audio_frames_from_iterator(
@@ -268,4 +261,3 @@ class PiperHttpTTSService(TTSService):
             yield ErrorFrame(error=f"Unknown error occurred: {e}")
         finally:
             await self.stop_ttfb_metrics()
-            yield TTSStoppedFrame(context_id=context_id)

@@ -22,8 +22,6 @@ from pipecat.frames.frames import (
     ErrorFrame,
     Frame,
     TTSAudioRawFrame,
-    TTSStartedFrame,
-    TTSStoppedFrame,
 )
 from pipecat.services.settings import NOT_GIVEN, TTSSettings, _NotGiven
 from pipecat.services.tts_service import TTSService
@@ -199,6 +197,8 @@ class AWSPollyTTSService(TTSService):
 
         super().__init__(
             sample_rate=sample_rate,
+            push_start_frame=True,
+            push_stop_frames=True,
             settings=AWSPollyTTSSettings(
                 model=None,
                 voice=voice_id,
@@ -292,8 +292,6 @@ class AWSPollyTTSService(TTSService):
         logger.debug(f"{self}: Generating TTS [{text}]")
 
         try:
-            await self.start_ttfb_metrics()
-
             # Construct the parameters dictionary
             ssml = self._construct_ssml(text)
 
@@ -325,8 +323,6 @@ class AWSPollyTTSService(TTSService):
 
                 await self.start_tts_usage_metrics(text)
 
-                yield TTSStartedFrame(context_id=context_id)
-
                 CHUNK_SIZE = self.chunk_size
 
                 for i in range(0, len(audio_data), CHUNK_SIZE):
@@ -336,13 +332,9 @@ class AWSPollyTTSService(TTSService):
                         frame = TTSAudioRawFrame(chunk, self.sample_rate, 1, context_id=context_id)
                         yield frame
 
-                yield TTSStoppedFrame(context_id=context_id)
         except (BotoCoreError, ClientError) as error:
             error_message = f"AWS Polly TTS error: {str(error)}"
             yield ErrorFrame(error=error_message)
-
-        finally:
-            yield TTSStoppedFrame(context_id=context_id)
 
 
 class PollyTTSService(AWSPollyTTSService):
