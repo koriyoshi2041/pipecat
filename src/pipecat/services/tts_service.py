@@ -1362,7 +1362,7 @@ class TTSService(AIService):
 class WordTTSService(TTSService):
     """Deprecated. Use TTSService directly instead.
 
-    .. deprecated::
+    .. deprecated:: 0.0.105
         Word timestamp functionality is now always active in TTSService.
     """
 
@@ -1450,7 +1450,7 @@ class InterruptibleTTSService(WebsocketTTSService):
 class WebsocketWordTTSService(WebsocketTTSService):
     """Deprecated. Use WebsocketTTSService directly instead.
 
-    .. deprecated::
+    .. deprecated:: 0.0.105
         Word timestamp functionality is now always active in TTSService.
     """
 
@@ -1467,7 +1467,7 @@ class WebsocketWordTTSService(WebsocketTTSService):
 class InterruptibleWordTTSService(InterruptibleTTSService):
     """Deprecated. Use InterruptibleTTSService directly instead.
 
-    .. deprecated::
+    .. deprecated:: 0.0.105
         Word timestamp functionality is now always active in TTSService.
     """
 
@@ -1486,7 +1486,7 @@ class AudioContextTTSService(WebsocketTTSService):
     Audio context management (previously the main purpose of this class) is now
     built into TTSService. This class is kept only for backwards compatibility.
 
-    .. deprecated::
+    .. deprecated:: 0.0.105
         Subclass :class:`WebsocketTTSService` directly and pass
         ``reuse_context_id_within_turn`` as
         keyword arguments to its ``__init__``.
@@ -1524,7 +1524,7 @@ class AudioContextTTSService(WebsocketTTSService):
 class AudioContextWordTTSService(AudioContextTTSService):
     """Deprecated. Use WebsocketTTSService directly instead.
 
-    .. deprecated::
+    .. deprecated:: 0.0.105
         Subclass :class:`WebsocketTTSService` directly.
     """
 
