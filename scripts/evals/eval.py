@@ -255,10 +255,6 @@ async def run_eval_pipeline(
         voice_id="97f4b8fb-f2fe-444b-bb9a-c109783a857a",  # Nathan
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"))
-
-    llm.register_function("eval_function", eval_runner.function_assert_eval)
-
     eval_function = FunctionSchema(
         name="eval_function",
         description=(
@@ -302,14 +298,14 @@ async def run_eval_pipeline(
     else:
         system_prompt = f"You are an evaluation agent, be extremly brief. First, ask one question: {example_prompt}. {common_system_prompt}"
 
-    messages = [
-        {
-            "role": "system",
-            "content": system_prompt,
-        },
-    ]
+    llm = OpenAILLMService(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        system_instruction=system_prompt,
+    )
 
-    context = LLMContext(messages, tools)
+    llm.register_function("eval_function", eval_runner.function_assert_eval)
+
+    context = LLMContext(tools=tools)
     context_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(

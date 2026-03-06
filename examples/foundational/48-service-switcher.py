@@ -109,8 +109,16 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         services=[tts_cartesia, tts_deepgram], strategy_type=ServiceSwitcherStrategyManual
     )
 
-    llm_openai = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"))
-    llm_google = GoogleLLMService(api_key=os.getenv("GOOGLE_API_KEY"))
+    system_prompt = "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be spoken aloud, so avoid special characters that can't easily be spoken, such as emojis or bullet points. Respond to what the user said in a creative and helpful way."
+
+    llm_openai = OpenAILLMService(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        system_instruction=system_prompt,
+    )
+    llm_google = GoogleLLMService(
+        api_key=os.getenv("GOOGLE_API_KEY"),
+        system_instruction=system_prompt,
+    )
     llm_switcher = LLMSwitcher(
         llms=[llm_openai, llm_google], strategy_type=ServiceSwitcherStrategyManual
     )
@@ -119,15 +127,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     # Register a "direct" function
     llm_switcher.register_direct_function(get_restaurant_recommendation)
 
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be spoken aloud, so avoid special characters that can't easily be spoken, such as emojis or bullet points. Respond to what the user said in a creative and helpful way.",
-        },
-    ]
     tools = ToolsSchema(standard_tools=[weather_function, get_restaurant_recommendation])
 
-    context = LLMContext(messages, tools)
+    context = LLMContext(tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
@@ -158,7 +160,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def on_client_connected(transport, client):
         logger.info(f"Client connected")
         # Kick off the conversation.
-        messages.append({"role": "system", "content": "Please introduce yourself to the user."})
+        context.add_message({"role": "user", "content": "Please introduce yourself to the user."})
         await task.queue_frames([LLMRunFrame()])
         await asyncio.sleep(15)
         print(f"Switching to {stt_deepgram}")

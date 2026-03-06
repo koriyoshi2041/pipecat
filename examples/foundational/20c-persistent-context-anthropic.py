@@ -96,18 +96,7 @@ async def load_conversation(params: FunctionCallParams):
         await params.result_callback({"success": False, "error": str(e)})
 
 
-# Test message munging ...
-messages = [
-    {
-        "role": "system",
-        "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be spoken aloud, so avoid special characters that can't easily be spoken, such as emojis or bullet points. Respond to what the user said in a succinct, creative and helpful way. Prefer responses that are one sentence long unless you are asked for a longer or more detailed response.",
-    },
-    {"role": "user", "content": "Start the call by saying the word 'hello'. Say only that word."},
-    # {"role": "user", "content": ""},
-    # {"role": "assistant", "content": []},
-    # {"role": "user", "content": "Tell me"},
-    # {"role": "user", "content": "a joke"},
-]
+system_instruction = "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be spoken aloud, so avoid special characters that can't easily be spoken, such as emojis or bullet points. Respond to what the user said in a succinct, creative and helpful way. Prefer responses that are one sentence long unless you are asked for a longer or more detailed response."
 
 weather_function = FunctionSchema(
     name="get_current_weather",
@@ -193,7 +182,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     )
 
     llm = AnthropicLLMService(
-        api_key=os.getenv("ANTHROPIC_API_KEY"), model="claude-3-5-sonnet-latest"
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        system_instruction=system_instruction,
     )
 
     # you can either register a single function for all function calls, or specific functions
@@ -203,7 +193,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     llm.register_function("get_saved_conversation_filenames", get_saved_conversation_filenames)
     llm.register_function("load_conversation", load_conversation)
 
-    context = LLMContext(messages, tools)
+    context = LLMContext(tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
@@ -234,6 +224,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def on_client_connected(transport, client):
         logger.info(f"Client connected")
         # Kick off the conversation.
+        context.add_message(
+            {
+                "role": "user",
+                "content": "Start the call by saying the word 'hello'. Say only that word.",
+            }
+        )
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
